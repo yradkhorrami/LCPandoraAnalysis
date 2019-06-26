@@ -1,8 +1,8 @@
 /**
  *  @file   PandoraAnalysis/src/PfoAnalysis.cc
- * 
+ *
  *  @brief  Implementation of the pfo analysis class.
- * 
+ *
  *  $Log: $
  */
 
@@ -77,6 +77,12 @@ PfoAnalysis::PfoAnalysis() :
     m_hPfoEnergySumL7A(NULL),
     m_collectCalibrationDetails(0),
     m_pCalibrationHelper(NULL),
+    m_nSLDecayBHad(0),
+    m_nSLDecayCHad(0),
+    m_nSLDecayTotal(0),
+    m_recENuPlus(0.f),
+    m_recENuMinus(0.f),
+    m_recENuClose(0.f),
     m_calibrationHelperSettings()
 {
     _description = "PfoAnalysis analyses output of PandoraPFANew";
@@ -92,6 +98,13 @@ PfoAnalysis::PfoAnalysis() :
                             "Name of mc particle collections",
                             m_mcParticleCollection,
                             std::string());
+
+   registerInputCollection( 	LCIO::MCPARTICLE,
+				"NeutrinoCorrection",
+				"Collection of Corrected/Estimated neutrino energies from SemiLeptonic decays",
+				m_NuCorrCollection,
+				std::string("NuCorrect")
+				);
 
     registerProcessorParameter("LookForQuarksWithMotherZ",
                             "Flag to look for quarks with mother Z",
@@ -139,63 +152,63 @@ PfoAnalysis::PfoAnalysis() :
                            int(0));
 
     registerInputCollections(LCIO::CALORIMETERHIT,
-                           "ECalCollections", 
+                           "ECalCollections",
                            "Name of the ECal collection of calo hits used to form clusters",
                            m_calibrationHelperSettings.m_eCalCollections,
                            LCStrVec());
 
     registerInputCollections(LCIO::CALORIMETERHIT,
-                           "HCalCollections", 
+                           "HCalCollections",
                            "Name of the HCal collection of calo hits used to form clusters",
                            m_calibrationHelperSettings.m_hCalCollections,
                            LCStrVec());
 
     registerInputCollections(LCIO::CALORIMETERHIT,
-                           "MuonCollections", 
+                           "MuonCollections",
                            "Name of the Muon collection of calo hits used to form clusters",
                            m_calibrationHelperSettings.m_muonCollections,
                            LCStrVec());
 
     registerInputCollections(LCIO::CALORIMETERHIT,
-                           "BCalCollections", 
+                           "BCalCollections",
                            "Name of the BCal collection of calo hits used to form clusters",
                            m_calibrationHelperSettings.m_bCalCollections,
                            LCStrVec());
 
     registerInputCollections(LCIO::CALORIMETERHIT,
-                           "LHCalCollections", 
+                           "LHCalCollections",
                            "Name of the LHCal collection of calo hits used to form clusters",
                            m_calibrationHelperSettings.m_lHCalCollections,
                            LCStrVec());
 
     registerInputCollections(LCIO::CALORIMETERHIT,
-                           "LCalCollections", 
+                           "LCalCollections",
                            "Name of the LCal collection of calo hits used to form clusters",
                            m_calibrationHelperSettings.m_lCalCollections,
                            LCStrVec());
 
-    registerInputCollections(LCIO::SIMCALORIMETERHIT, 
-                           "ECalCollectionsSimCaloHit" , 
-                           "Name of the ECal collection post Mokka, pre digitisation" , 
-                           m_calibrationHelperSettings.m_eCalCollectionsSimCaloHit , 
+    registerInputCollections(LCIO::SIMCALORIMETERHIT,
+                           "ECalCollectionsSimCaloHit" ,
+                           "Name of the ECal collection post Mokka, pre digitisation" ,
+                           m_calibrationHelperSettings.m_eCalCollectionsSimCaloHit ,
                            LCStrVec());
 
-    registerInputCollections(LCIO::SIMCALORIMETERHIT, 
-                           "HCalBarrelCollectionsSimCaloHit" , 
-                           "Name of the HCal Barrel collection post Mokka, pre digitisation" , 
-                           m_calibrationHelperSettings.m_hCalBarrelCollectionsSimCaloHit , 
+    registerInputCollections(LCIO::SIMCALORIMETERHIT,
+                           "HCalBarrelCollectionsSimCaloHit" ,
+                           "Name of the HCal Barrel collection post Mokka, pre digitisation" ,
+                           m_calibrationHelperSettings.m_hCalBarrelCollectionsSimCaloHit ,
                            LCStrVec());
 
-    registerInputCollections(LCIO::SIMCALORIMETERHIT, 
-                           "HCalEndCapCollectionsSimCaloHit" , 
-                           "Name of the HCal EndCap collection post Mokka, pre digitisation" , 
-                           m_calibrationHelperSettings.m_hCalEndCapCollectionsSimCaloHit , 
+    registerInputCollections(LCIO::SIMCALORIMETERHIT,
+                           "HCalEndCapCollectionsSimCaloHit" ,
+                           "Name of the HCal EndCap collection post Mokka, pre digitisation" ,
+                           m_calibrationHelperSettings.m_hCalEndCapCollectionsSimCaloHit ,
                            LCStrVec());
 
-    registerInputCollections(LCIO::SIMCALORIMETERHIT, 
-                           "HCalOtherCollectionsSimCaloHit" , 
-                           "Name of the HCal Other collection post Mokka, pre digitisation" , 
-                           m_calibrationHelperSettings.m_hCalOtherCollectionsSimCaloHit , 
+    registerInputCollections(LCIO::SIMCALORIMETERHIT,
+                           "HCalOtherCollectionsSimCaloHit" ,
+                           "Name of the HCal Other collection post Mokka, pre digitisation" ,
+                           m_calibrationHelperSettings.m_hCalOtherCollectionsSimCaloHit ,
                            LCStrVec());
 
      registerInputCollections(LCIO::SIMCALORIMETERHIT,
@@ -303,6 +316,12 @@ void PfoAnalysis::init()
     m_pTTree->Branch("mQQ", &m_mQQ, "mQQ/F");
     m_pTTree->Branch("thrust", &m_thrust, "thrust/F");
     m_pTTree->Branch("qPdg", &m_qPdg, "qPdg/I");
+    m_pTTree->Branch("nSLDecayBHad", &m_nSLDecayBHad, "nSLDecayBHad/I");
+    m_pTTree->Branch("nSLDecayCHad", &m_nSLDecayCHad, "nSLDecayCHad/I");
+    m_pTTree->Branch("nSLDecayTotal", &m_nSLDecayTotal, "nSLDecayTotal/I");
+    m_pTTree->Branch("recENuPlus", &m_recENuPlus, "recENuPlus/F");
+    m_pTTree->Branch("recENuMinus", &m_recENuMinus, "recENuMinus/F");
+    m_pTTree->Branch("recENuClose", &m_recENuClose, "recENuClose/F");
 
     if (m_collectCalibrationDetails)
         m_pCalibrationHelper = new pandora_analysis::CalibrationHelper(m_calibrationHelperSettings);
@@ -344,6 +363,7 @@ void PfoAnalysis::processEvent(EVENT::LCEvent *pLCEvent)
     this->ExtractCollections(pLCEvent);
     this->MakeQuarkVariables(pLCEvent);
     this->PerformPfoAnalysis();
+    this->ApplyNetrinoCorrection(pLCEvent);
 
     if (m_pCalibrationHelper)
         m_pCalibrationHelper->Calibrate(pLCEvent, m_pfoVector, m_nPfoTargetsTotal, m_nPfoTargetsTracks, m_nPfoTargetsNeutralHadrons, m_nPfoTargetsPhotons, m_pfoTargetsEnergyTotal);
@@ -355,6 +375,32 @@ void PfoAnalysis::processEvent(EVENT::LCEvent *pLCEvent)
 
 void PfoAnalysis::check(EVENT::LCEvent */*pLCEvent*/)
 {
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+void PfoAnalysis::ApplyNetrinoCorrection(EVENT::LCEvent *pLCEvent)
+{
+	try
+	{
+		const EVENT::LCCollection *NuCorrCollection = pLCEvent->getCollection(m_NuCorrCollection);
+		m_nSLDecayBHad = NuCorrCollection->getParameters().getIntVal("nBSLD");
+		m_nSLDecayCHad = NuCorrCollection->getParameters().getIntVal("nCSLD");
+		m_nSLDecayTotal = NuCorrCollection->getParameters().getIntVal("nSLD");
+		m_recENuPlus = NuCorrCollection->getParameters().getFloatVal("recENuPlus");
+		m_recENuMinus = NuCorrCollection->getParameters().getFloatVal("recENuMinus");
+		m_recENuClose = NuCorrCollection->getParameters().getFloatVal("recENuClose");
+		m_recEnergyENuPlus = NuCorrCollection->getParameters().getFloatVals("recEnergyENuPlus", m_recEnergyENuPlus);
+		m_recEnergyENuMinus = NuCorrCollection->getParameters().getFloatVals("recEnergyENuMinus", m_recEnergyENuMinus);
+		m_recEnergyENuClose = NuCorrCollection->getParameters().getFloatVals("recEnergyENuClose", m_recEnergyENuClose);
+
+
+	}
+	catch (...)
+	{
+		streamlog_out(WARNING) << "Could not extract mc particle collection " << m_mcParticleCollection << std::endl;
+	}
+
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -443,6 +489,13 @@ void PfoAnalysis::Clear()
     m_thrust = -99.f;
     m_qPdg = -99;
 
+    m_nSLDecayBHad = 0;
+    m_nSLDecayCHad = 0;
+    m_nSLDecayTotal = 0;
+    m_recENuPlus = 0.f;
+    m_recENuMinus = 0.f;
+    m_recENuClose = 0.f;
+
     if (m_pCalibrationHelper)
         m_pCalibrationHelper->Clear();
 }
@@ -452,9 +505,11 @@ void PfoAnalysis::Clear()
 void PfoAnalysis::ExtractCollections(EVENT::LCEvent *pLCEvent)
 {
     // Extract reconstructed pfo collection
+    LCCollection *NuCorrCollection = NULL;
     try
     {
         const EVENT::LCCollection *pLCCollection = pLCEvent->getCollection(m_inputPfoCollection);
+	NuCorrCollection = pLCEvent->getCollection(m_NuCorrCollection);
 
         for (unsigned int i = 0, nElements = pLCCollection->getNumberOfElements(); i < nElements; ++i)
         {
