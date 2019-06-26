@@ -23,6 +23,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#what is new:
+
+# what is new:
 Added a new function (ApplyNetrinoCorrection) that gets number of semileptonic decays and produced neutrino energies from other processors (SLDecayFinder and NuCorrector) as parameters of a collection (NeutrinoCorrection).
 two solution for neutrino energies (besides closer solution to mcNu) are stored in three branches of output root file.
